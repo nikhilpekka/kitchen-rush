@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#17252b"><title>Kitchen Rush Controller</title>
+<style>
+:root{color-scheme:dark;--bg:#10191e;--panel:#1c2a31;--yellow:#ffc857;--blue:#4da3ff;--green:#5fd38d;--red:#ff6b5e}*{box-sizing:border-box;touch-action:none;-webkit-user-select:none;user-select:none}body{margin:0;min-height:100dvh;background:radial-gradient(circle at 50% 0,#304650,var(--bg) 65%);color:#f4f7f8;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:18px;gap:16px}.head{text-align:center}.head h1{margin:0;color:var(--yellow);font-size:clamp(24px,6vw,34px)}.head p{margin:6px 0;color:#b8c8ce;font-size:14px}.status{font-size:12px;color:var(--green);min-height:18px}.controller{width:min(100%,560px);display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center;flex:1}.dpad{display:grid;grid-template-columns:repeat(3,minmax(52px,1fr));grid-template-rows:repeat(3,minmax(58px,1fr));gap:7px;aspect-ratio:1}.btn{border:1px solid #ffffff2b;border-radius:16px;background:var(--panel);color:#fff;font-weight:800;font-size:clamp(19px,5vw,27px);box-shadow:0 5px 0 #080e11;display:flex;align-items:center;justify-content:center;min-height:54px}.btn:active,.btn.down{transform:translateY(3px);box-shadow:0 2px 0 #080e11;background:#3a515c}.empty{visibility:hidden}.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.action{aspect-ratio:1;border-radius:50%;min-height:82px;font-size:14px;flex-direction:column;gap:4px}.action strong{font-size:25px}.pick{background:#244a38;border-color:#5fd38d88}.work{background:#56451d;border-color:#ffc85788}.dash{background:#49313a;border-color:#ff6b5e88;grid-column:1/-1;aspect-ratio:auto;min-height:58px;border-radius:16px}.hint{max-width:560px;text-align:center;color:#9fb4bd;font-size:12px;line-height:1.5}.foot{color:#81949c;font-size:11px}@media(max-width:370px){body{padding:12px}.controller{gap:12px}.dpad{gap:5px;grid-template-rows:repeat(3,minmax(48px,1fr))}.btn{border-radius:12px}.action{min-height:70px}}
+</style></head>
+<body>
+<header class="head"><h1>KITCHEN RUSH</h1><p>Phone controller</p><div id="status" class="status">Connecting…</div></header>
+<main class="controller">
+  <section class="dpad" aria-label="Movement controls">
+    <div class="empty"></div><button class="btn" data-move="up">▲</button><div class="empty"></div>
+    <button class="btn" data-move="left">◀</button><div class="btn" style="font-size:12px;color:#9fb4bd">MOVE</div><button class="btn" data-move="right">▶</button>
+    <div class="empty"></div><button class="btn" data-move="down">▼</button><div class="empty"></div>
+  </section>
+  <section class="actions" aria-label="Action controls">
+    <button class="btn action pick" data-action="a"><strong>↕</strong>PICK / DROP</button>
+    <button class="btn action work" data-action="b"><strong>✦</strong>CHOP / WASH</button>
+    <button class="btn action dash" data-action="c">DASH</button>
+  </section>
+</main>
+<div class="hint">Connect your phone and laptop to the same Wi-Fi. Keep this page open while playing. Use the movement pad to move and the action buttons to interact.</div>
+<div class="foot">Kitchen Rush · Local Wi-Fi controller</div>
+<script>
+const statusEl=document.getElementById('status');
+const idKey='kitchen-rush-controller-id';
+let id=sessionStorage.getItem(idKey);
+if(!id){id='phone_'+Math.random().toString(36).slice(2,12);sessionStorage.setItem(idKey,id)}
+const state={dx:0,dy:0,a:0,b:0,c:0};
+const held=new Set();
+function recalc(){state.dx=(held.has('left')?-1:0)+(held.has('right')?1:0);state.dy=(held.has('up')?-1:0)+(held.has('down')?1:0);}
+function bindHold(el,key){const down=e=>{e.preventDefault();held.add(key);el.classList.add('down');recalc()};const up=e=>{e.preventDefault();held.delete(key);el.classList.remove('down');recalc()};el.addEventListener('pointerdown',down);for(const name of ['pointerup','pointercancel','lostpointercapture','pointerleave'])el.addEventListener(name,up)}
+document.querySelectorAll('[data-move]').forEach(el=>bindHold(el,el.dataset.move));
+document.querySelectorAll('[data-action]').forEach(el=>{const key=el.dataset.action;const down=e=>{e.preventDefault();state[key]=1;el.classList.add('down')};const up=e=>{e.preventDefault();state[key]=0;el.classList.remove('down')};el.addEventListener('pointerdown',down);for(const name of ['pointerup','pointercancel','lostpointercapture','pointerleave'])el.addEventListener(name,up)});
+async function send(){try{const r=await fetch('/input',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...state})});if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||'Connection error')}statusEl.textContent='CONNECTED · Ready to play';statusEl.style.color='var(--green)'}catch(e){statusEl.textContent=e.message==='Failed to fetch'?'Cannot reach game server. Check same Wi-Fi.':e.message;statusEl.style.color='var(--red)'}}
+setInterval(send,80);send();
+</script></body></html>
